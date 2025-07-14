@@ -12,6 +12,7 @@
     "run-agent": "tsx src/automation/agent-workflow.ts",
     "update-automation": "tsx src/scripts/update-automation.ts",
     "cancel-automation": "tsx src/scripts/cancel-automation.ts",
+    "example": "tsx examples/basic-usage.ts",
     "test": "jest",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts"
