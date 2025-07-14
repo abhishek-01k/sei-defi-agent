@@ -1,7 +1,7 @@
 {
   "name": "sei-defi-agent",
   "version": "1.0.0",
-  "description": "Automated DeFi agent for Sei blockchain with yield optimization and risk management",
+  "description": "AI-powered DeFi automation agent for Sei blockchain using sei-agent-kit",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
@@ -23,7 +23,10 @@
     "automation",
     "yield-optimization",
     "console-kit",
-    "blockchain"
+    "blockchain",
+    "ai",
+    "langchain",
+    "sei-agent-kit"
   ],
   "author": "Sei DeFi Agent Team",
   "license": "MIT",
@@ -39,7 +42,17 @@
     "winston": "^3.15.0",
     "joi": "^17.13.3",
     "bignumber.js": "^9.1.2",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "@bancor/carbon-sdk": "^0.0.115-DEV",
+    "@cosmjs/stargate": "^0.33.0",
+    "@langchain/langgraph": "^0.2.65",
+    "@langchain/openai": "^0.5.10",
+    "@langchain/core": "^0.3.19",
+    "langchain": "^0.3.19",
+    "openai": "^3.3.0",
+    "citrex-sdk": "^1.2.2",
+    "symphony-sdk": "^2.1.0",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.7",
