@@ -32,30 +32,31 @@
   "author": "Sei DeFi Agent Team",
   "license": "MIT",
   "dependencies": {
-    "brahma-console-kit": "^1.0.19",
-    "ethers": "^6.13.5",
-    "ethers-multisend": "^3.1.0",
-    "viem": "^2.23.11",
-    "axios": "^1.7.9",
-    "ws": "^8.18.0",
-    "dotenv": "^16.4.7",
-    "node-cron": "^3.0.3",
-    "winston": "^3.15.0",
-    "joi": "^17.13.3",
-    "bignumber.js": "^9.1.2",
-    "lodash": "^4.17.21",
     "@bancor/carbon-sdk": "^0.0.115-DEV",
     "@cosmjs/stargate": "^0.33.0",
+    "@langchain/core": "^0.3.19",
     "@langchain/langgraph": "^0.2.65",
     "@langchain/openai": "^0.5.10",
-    "@langchain/core": "^0.3.19",
-    "langchain": "^0.3.19",
-    "openai": "^3.3.0",
+    "axios": "^1.7.9",
+    "bignumber.js": "^9.1.2",
+    "brahma-console-kit": "^1.0.19",
     "citrex-sdk": "^1.2.2",
-    "symphony-sdk": "^2.1.0",
-    "zod": "^3.24.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "ethers": "^6.13.5",
+    "ethers-multisend": "^3.1.0",
     "express": "^4.19.2",
-    "cors": "^2.8.5"
+    "joi": "^17.13.3",
+    "langchain": "^0.3.19",
+    "lodash": "^4.17.21",
+    "node-cron": "^3.0.3",
+    "openai": "^3.3.0",
+    "symphony-sdk": "^2.1.0",
+    "twitter-api-v2": "^1.24.0",
+    "viem": "^2.23.11",
+    "winston": "^3.15.0",
+    "ws": "^8.18.0",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.7",
@@ -76,4 +77,4 @@
   "engines": {
     "node": ">=18.0.0"
   }
-} 
+}
