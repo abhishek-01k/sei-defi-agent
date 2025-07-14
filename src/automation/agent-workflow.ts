@@ -2,10 +2,10 @@ import { ConsoleKit, TaskParams, ExecutionResult, WorkflowStateResponse } from '
 import { ethers, Wallet } from 'ethers';
 import { logger } from '../utils/logger';
 import { poll } from '../utils/polling';
-import SeiDeFiAgentKit, { 
-  AgentKitConfig, 
-  YieldOptimizationRequest, 
-  ExecutionResult as AgentExecutionResult 
+import SeiDeFiAgentKit, {
+  AgentKitConfig,
+  YieldOptimizationRequest,
+  ExecutionResult as AgentExecutionResult
 } from '../agent-kit';
 import { Address } from 'viem';
 import { ModelProviderName } from '../types';
@@ -136,12 +136,11 @@ class SeiDeFiAgent implements SeiAgentWorkflow {
     };
 
     this.agentKit = new SeiDeFiAgentKit(agentKitConfig);
-
     // Initialize Console Kit
-    this.consoleKit = new ConsoleKit({
-      apiKey: process.env.BRAHMA_API_KEY!,
-      network: process.env.NETWORK_TYPE || 'testnet'
-    });
+    this.consoleKit = new ConsoleKit(
+      process.env.BRAHMA_API_KEY!,
+      process.env.NETWORK_TYPE || 'testnet'
+    );
 
     logger.info('Sei DeFi Agent initialized successfully');
     logger.info(`Agent wallet address: ${this.agentKit.getWalletAddress()}`);
@@ -247,7 +246,7 @@ class SeiDeFiAgent implements SeiAgentWorkflow {
     try {
       const profit = parseFloat(result.profit || '0');
       const gasUsed = parseFloat(result.gasUsed || '0');
-      
+
       // Convert gas used to fees (assuming gas price)
       const gasPrice = parseFloat(this.config.maxGasPrice);
       const fees = (gasUsed * gasPrice) / 1e18; // Convert to SEI
@@ -345,7 +344,7 @@ async function pollTasksAndSubmit(
 ): Promise<boolean> {
   try {
     const response = await consoleKit.executorModule.getTasksQueue();
-    
+
     if (!response.success || !response.data || response.data.length === 0) {
       logger.info('No pending tasks found');
       return true;
@@ -363,7 +362,7 @@ async function pollTasksAndSubmit(
         }
 
         const executionResult = await agent.executeHandler(task.taskParams);
-        
+
         if (executionResult.skip) {
           logger.info(`Skipping task ${task.taskId}: ${executionResult.message}`);
           continue;
@@ -371,14 +370,14 @@ async function pollTasksAndSubmit(
 
         // Generate transactions if execution was successful
         const transactions = executionResult.transactions || [];
-        
+
         if (transactions.length === 0) {
           logger.info(`No transactions to execute for task ${task.taskId}`);
           continue;
         }
 
         const executorNonce = await executorWallet.getNonce();
-        
+
         const success = await executeTransaction(
           consoleKit,
           executorWallet,
@@ -431,14 +430,14 @@ async function executeTransaction(
     };
 
     const metatxResponse = await consoleKit.transactionModule.buildMetaTx(metaTxPayload);
-    
+
     if (!metatxResponse.success || !metatxResponse.data) {
       logger.error('Failed to build meta transaction:', metatxResponse.error);
       return false;
     }
 
     const signedTx = await executorWallet.signTransaction(metatxResponse.data);
-    
+
     const submitPayload = {
       safe: taskParams.subAccountAddress,
       signature: signedTx,
@@ -457,7 +456,7 @@ async function executeTransaction(
     };
 
     const submitResponse = await consoleKit.executorModule.submitTransaction(submitPayload);
-    
+
     if (!submitResponse.success) {
       logger.error('Failed to submit transaction:', submitResponse.error);
       return false;
@@ -479,7 +478,7 @@ async function main(): Promise<void> {
     const chainId = parseInt(process.env.CHAIN_ID || '1329');
     const registryId = process.env.REGISTRY_ID!;
     const executorAddress = process.env.EXECUTOR_ADDRESS!;
-    
+
     const executorWallet = new Wallet(
       process.env.EXECUTOR_PRIVATE_KEY!,
       new ethers.JsonRpcProvider(process.env.RPC_URL!)
@@ -495,7 +494,7 @@ async function main(): Promise<void> {
           registryId,
           executorAddress
         );
-        
+
         if (!success) {
           logger.error('Polling failed, retrying in 10 seconds...');
           await new Promise(resolve => setTimeout(resolve, 10000));

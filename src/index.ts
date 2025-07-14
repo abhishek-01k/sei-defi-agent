@@ -25,9 +25,9 @@ let automationAgent: SeiDeFiAgent;
 async function initializeAgentKit(): Promise<void> {
   try {
     // Validate required environment variables
-    const requiredVars = ['PRIVATE_KEY', 'OPENAI_API_KEY', 'BRAHMA_API_KEY'];
+    const requiredVars = ['PRIVATE_KEY', 'OPENAI_API_KEY', 'BRAHMA_API_KEY', 'GROQ_API_KEY'];
     const missingVars = requiredVars.filter(varName => !process.env[varName]);
-    
+
     if (missingVars.length > 0) {
       throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
     }
@@ -37,14 +37,13 @@ async function initializeAgentKit(): Promise<void> {
       privateKey: process.env.PRIVATE_KEY!,
       openaiApiKey: process.env.OPENAI_API_KEY!,
       rpcUrl: process.env.RPC_URL || 'https://evm-rpc.sei-apis.com',
-      modelProvider: ModelProviderName.OPENAI,
+      // modelProvider: ModelProviderName.GROQ,
       temperature: 0,
-      model: "gpt-4o"
     };
 
     // Initialize the agent kit
     agentKit = new SeiDeFiAgentKit(agentKitConfig);
-    
+
     // Initialize automation agent
     automationAgent = new SeiDeFiAgent();
 
@@ -59,8 +58,8 @@ async function initializeAgentKit(): Promise<void> {
 
 // API Routes
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
+  res.json({
+    status: 'healthy',
     timestamp: new Date().toISOString(),
     walletAddress: agentKit?.getWalletAddress(),
     availableTools: agentKit?.getAvailableTools() || []
@@ -133,7 +132,7 @@ app.post('/optimize', async (req, res) => {
     }
 
     const result = await agentKit.optimizeYield(request);
-    
+
     res.json({
       success: result.success,
       transactionHash: result.transactionHash,
@@ -429,7 +428,7 @@ app.use((error: any, req: express.Request, res: express.Response, next: express.
 async function startServer(): Promise<void> {
   try {
     await initializeAgentKit();
-    
+
     app.listen(port, () => {
       logger.info(`Sei DeFi Agent API server running on port ${port}`);
       logger.info(`Health check: http://localhost:${port}/health`);

@@ -1,6 +1,7 @@
 import { SeiAgentKit } from '../agent';
 import { createSeiTools } from '../langchain';
 import { ChatOpenAI } from '@langchain/openai';
+import { ChatGroq } from '@langchain/groq';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { MemorySaver } from '@langchain/langgraph';
 import { HumanMessage } from '@langchain/core/messages';
@@ -49,10 +50,10 @@ export class SeiDeFiAgentKit {
       config.privateKey,
       config.modelProvider || ModelProviderName.OPENAI
     );
-    
+
     this.tools = createSeiTools(this.seiKit);
     this.memory = new MemorySaver();
-    
+
     this.initializeAgent();
   }
 
@@ -64,8 +65,13 @@ export class SeiDeFiAgentKit {
         temperature: this.config.temperature || 0,
       });
 
+      const groqLLM = new ChatGroq({
+        apiKey: process.env.GROQ_API_KEY,
+        model: "llama-3.3-70b-versatile",
+      });
+
       this.agent = createReactAgent({
-        llm,
+        groqLLM,
         tools: this.tools,
         checkpointSaver: this.memory,
       });
@@ -222,11 +228,11 @@ export class SeiDeFiAgentKit {
   async optimizeYield(request: YieldOptimizationRequest): Promise<ExecutionResult> {
     try {
       const prompt = this.buildOptimizationPrompt(request);
-      
-      const agentConfig = { 
-        configurable: { 
-          thread_id: `yield-optimization-${request.userAddress}-${Date.now()}` 
-        } 
+
+      const agentConfig = {
+        configurable: {
+          thread_id: `yield-optimization-${request.userAddress}-${Date.now()}`
+        }
       };
 
       const result = await this.agent.invoke(
@@ -235,7 +241,7 @@ export class SeiDeFiAgentKit {
       );
 
       const lastMessage = result.messages[result.messages.length - 1];
-      
+
       return {
         success: true,
         recommendations: [lastMessage.content],
@@ -264,10 +270,10 @@ export class SeiDeFiAgentKit {
       - Concentration risks
       - Recommendations for risk mitigation`;
 
-      const agentConfig = { 
-        configurable: { 
-          thread_id: `risk-assessment-${userAddress}-${Date.now()}` 
-        } 
+      const agentConfig = {
+        configurable: {
+          thread_id: `risk-assessment-${userAddress}-${Date.now()}`
+        }
       };
 
       const result = await this.agent.invoke(
@@ -298,10 +304,10 @@ export class SeiDeFiAgentKit {
       
       Execute the strategy step by step, providing transaction details and expected outcomes.`;
 
-      const agentConfig = { 
-        configurable: { 
-          thread_id: `strategy-execution-${Date.now()}` 
-        } 
+      const agentConfig = {
+        configurable: {
+          thread_id: `strategy-execution-${Date.now()}`
+        }
       };
 
       const result = await this.agent.invoke(
