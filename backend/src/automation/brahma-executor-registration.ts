@@ -61,8 +61,8 @@ export class BrahmaExecutorRegistration {
       ],
       inputTokens: [
         "0x0000000000000000000000000000000000000000", // Native SEI
-        "0x...", // USDC address on Sei
-        "0x...", // Other supported tokens
+        "0x785558a96899f7c10a20affaacd92b64fb9c8b0c", // USDC address on Sei
+        "0x160345fC359604fC6e70E3c5fAcbdE5F7A9342d8" // Wrapped ETH on Sei
       ],
       limitPerExecution: true,
       timestamp: new Date().getTime()
