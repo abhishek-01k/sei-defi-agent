@@ -14,7 +14,9 @@
     "run-agent": "tsx src/automation/enhanced-agent-workflow.ts",
     "run-enhanced-agent": "tsx src/automation/enhanced-agent-workflow.ts",
     "run-dynamic-engine": "tsx src/automation/dynamic-automation-engine.ts",
-    "test:scenarios": "tsx src/test/scenarios.ts"
+    "test:scenarios": "tsx src/test/scenarios.ts",
+    "register-executor": "tsx src/automation/brahma-executor-registration.ts",
+    "run-corrected-agent": "tsx src/automation/corrected-brahma-workflow.ts"
   },
   "keywords": [
     "sei",
@@ -31,7 +33,6 @@
     "@ai-sdk/openai": "^0.0.66",
     "@types/ws": "^8.5.10",
     "ai": "^3.4.7",
-    "console-kit": "file:../console-kit",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "ethers": "^6.13.2",
@@ -52,7 +53,8 @@
     "axios": "^1.7.9",
     "bignumber.js": "^9.1.2",
     "brahma-console-kit": "^1.0.19",
-    "citrex-sdk": "^1.2.2"
+    "citrex-sdk": "^1.2.2",
+    "ethers-multisend": "^2.1.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
