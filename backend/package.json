@@ -10,10 +10,13 @@
     "register-executor": "tsx src/scripts/register-executor.ts",
     "deploy-account": "tsx src/scripts/deploy-automation-account.ts",
     "run-agent": "tsx src/automation/agent-workflow.ts",
+    "run-enhanced-agent": "tsx src/automation/enhanced-agent-workflow.ts",
+    "run-dynamic-engine": "tsx src/automation/dynamic-automation-engine.ts",
     "update-automation": "tsx src/scripts/update-automation.ts",
     "cancel-automation": "tsx src/scripts/cancel-automation.ts",
     "example": "tsx examples/basic-usage.ts",
     "test": "jest",
+    "test:scenarios": "tsx src/tests/test-scenarios.ts",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts"
   },
@@ -27,7 +30,8 @@
     "blockchain",
     "ai",
     "langchain",
-    "sei-agent-kit"
+    "sei-agent-kit",
+    "dynamic-automation"
   ],
   "author": "Sei DeFi Agent Team",
   "license": "MIT",

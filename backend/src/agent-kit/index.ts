@@ -65,13 +65,13 @@ export class SeiDeFiAgentKit {
         temperature: this.config.temperature || 0,
       });
 
-      const groqLLM = new ChatGroq({
-        apiKey: process.env.GROQ_API_KEY,
-        model: "llama-3.3-70b-versatile",
-      });
+    //   const groqLLM = new ChatGroq({
+    //     apiKey: process.env.GROQ_API_KEY,
+    //     model: "llama-3.3-70b-versatile",
+    //   });
 
       this.agent = createReactAgent({
-        groqLLM,
+        llm,
         tools: this.tools,
         checkpointSaver: this.memory,
       });

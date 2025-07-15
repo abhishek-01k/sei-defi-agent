@@ -142,8 +142,9 @@ class SeiDeFiAgent implements SeiAgentWorkflow {
       process.env.NETWORK_TYPE || 'testnet'
     );
 
-    logger.info('Sei DeFi Agent initialized successfully');
+    logger.info('Sei DeFi Agent initialized successfully : agent workflow');
     logger.info(`Agent wallet address: ${this.agentKit.getWalletAddress()}`);
+    logger.info(`Agent wallet balance: ${this.agentKit.getBalance()}`);
     logger.info(`Available tools: ${this.agentKit.getAvailableTools().join(', ')}`);
   }
 

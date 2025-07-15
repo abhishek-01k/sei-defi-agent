@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import { logger } from './utils/logger';
 import SeiDeFiAgentKit, { AgentKitConfig, YieldOptimizationRequest } from './agent-kit';
 import { SeiDeFiAgent } from './automation/agent-workflow';
+import { EnhancedSeiDeFiAgent } from './automation/enhanced-agent-workflow';
+import { AutomationScenario } from './automation/dynamic-automation-engine';
 import { ModelProviderName } from './types';
 import { Address } from 'viem';
 
@@ -20,12 +22,13 @@ app.use(express.json());
 // Global variables
 let agentKit: SeiDeFiAgentKit;
 let automationAgent: SeiDeFiAgent;
+let enhancedAgent: EnhancedSeiDeFiAgent;
 
 // Initialize the agent kit
 async function initializeAgentKit(): Promise<void> {
   try {
     // Validate required environment variables
-    const requiredVars = ['PRIVATE_KEY', 'OPENAI_API_KEY', 'BRAHMA_API_KEY', 'GROQ_API_KEY'];
+    const requiredVars = ['PRIVATE_KEY', 'OPENAI_API_KEY', 'BRAHMA_API_KEY'];
     const missingVars = requiredVars.filter(varName => !process.env[varName]);
 
     if (missingVars.length > 0) {
@@ -47,6 +50,9 @@ async function initializeAgentKit(): Promise<void> {
     // Initialize automation agent
     automationAgent = new SeiDeFiAgent();
 
+    // Initialize enhanced agent
+    enhancedAgent = new EnhancedSeiDeFiAgent();
+
     logger.info('Sei DeFi Agent Kit initialized successfully');
     logger.info(`Agent wallet address: ${agentKit.getWalletAddress()}`);
     logger.info(`Available tools: ${agentKit.getAvailableTools().join(', ')}`);
@@ -56,13 +62,14 @@ async function initializeAgentKit(): Promise<void> {
   }
 }
 
-// API Routes
+// Basic API Routes
 app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
     walletAddress: agentKit?.getWalletAddress(),
-    availableTools: agentKit?.getAvailableTools() || []
+    availableTools: agentKit?.getAvailableTools() || [],
+    enhancedAgentStatus: enhancedAgent?.getEngineStatus() || {}
   });
 });
 
@@ -194,6 +201,189 @@ app.post('/execute-strategy', async (req, res) => {
   } catch (error) {
     logger.error('Error executing strategy:', error);
     res.status(500).json({ error: 'Failed to execute strategy' });
+  }
+});
+
+// Enhanced Automation API Routes
+
+// Register automation for a user
+app.post('/automation/register', async (req, res) => {
+  try {
+    if (!enhancedAgent) {
+      return res.status(503).json({ error: 'Enhanced agent not initialized' });
+    }
+
+    const { userAddress, preferences } = req.body;
+
+    if (!userAddress) {
+      return res.status(400).json({ error: 'userAddress is required' });
+    }
+
+    // Create default scenarios based on preferences
+    const scenarios = enhancedAgent.createDefaultScenarios(userAddress, preferences || {});
+
+    // Global configuration
+    const globalConfig = {
+      maxSlippage: preferences?.maxSlippage || 0.5,
+      riskTolerance: preferences?.riskTolerance || 'medium',
+      emergencyStopLoss: preferences?.emergencyStopLoss || 10.0,
+      maxGasPrice: preferences?.maxGasPrice || '1000000000',
+      preferredProtocols: preferences?.preferredProtocols || ['symphony', 'takara', 'silo']
+    };
+
+    // Register automation
+    await enhancedAgent.registerUserAutomation(userAddress, scenarios, globalConfig);
+
+    res.json({
+      success: true,
+      message: 'Automation registered successfully',
+      userAddress,
+      scenariosCount: scenarios.length,
+      scenarios: scenarios.map(s => ({
+        id: s.id,
+        name: s.name,
+        type: s.type,
+        enabled: s.enabled,
+        priority: s.priority
+      }))
+    });
+  } catch (error) {
+    logger.error('Error registering automation:', error);
+    res.status(500).json({ error: 'Failed to register automation' });
+  }
+});
+
+// Get automation context for a user
+app.get('/automation/context/:userAddress', async (req, res) => {
+  try {
+    if (!enhancedAgent) {
+      return res.status(503).json({ error: 'Enhanced agent not initialized' });
+    }
+
+    const userAddress = req.params.userAddress as Address;
+    const context = enhancedAgent.getAutomationContext(userAddress);
+
+    if (!context) {
+      return res.status(404).json({ error: 'Automation context not found for user' });
+    }
+
+    res.json({
+      success: true,
+      context: {
+        userAddress: context.userAddress,
+        chainId: context.chainId,
+        scenarios: context.scenarios,
+        globalConfig: context.globalConfig,
+        performanceMetrics: context.performanceMetrics
+      }
+    });
+  } catch (error) {
+    logger.error('Error getting automation context:', error);
+    res.status(500).json({ error: 'Failed to get automation context' });
+  }
+});
+
+// Update automation scenarios for a user
+app.put('/automation/scenarios/:userAddress', async (req, res) => {
+  try {
+    if (!enhancedAgent) {
+      return res.status(503).json({ error: 'Enhanced agent not initialized' });
+    }
+
+    const userAddress = req.params.userAddress as Address;
+    const { scenarios } = req.body;
+
+    if (!scenarios || !Array.isArray(scenarios)) {
+      return res.status(400).json({ error: 'scenarios array is required' });
+    }
+
+    // Update user scenarios
+    enhancedAgent.updateUserScenarios(userAddress, scenarios);
+
+    res.json({
+      success: true,
+      message: 'Automation scenarios updated successfully',
+      userAddress,
+      scenariosCount: scenarios.length
+    });
+  } catch (error) {
+    logger.error('Error updating automation scenarios:', error);
+    res.status(500).json({ error: 'Failed to update automation scenarios' });
+  }
+});
+
+// Get automation engine status
+app.get('/automation/status', async (req, res) => {
+  try {
+    if (!enhancedAgent) {
+      return res.status(503).json({ error: 'Enhanced agent not initialized' });
+    }
+
+    const status = enhancedAgent.getEngineStatus();
+
+    res.json({
+      success: true,
+      status,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('Error getting automation status:', error);
+    res.status(500).json({ error: 'Failed to get automation status' });
+  }
+});
+
+// Create custom automation scenario
+app.post('/automation/scenarios/custom', async (req, res) => {
+  try {
+    if (!enhancedAgent) {
+      return res.status(503).json({ error: 'Enhanced agent not initialized' });
+    }
+
+    const { userAddress, scenario } = req.body;
+
+    if (!userAddress || !scenario) {
+      return res.status(400).json({ error: 'userAddress and scenario are required' });
+    }
+
+    // Validate scenario structure
+    const requiredFields = ['name', 'description', 'type', 'triggers', 'parameters'];
+    for (const field of requiredFields) {
+      if (!scenario[field]) {
+        return res.status(400).json({ error: `scenario.${field} is required` });
+      }
+    }
+
+    // Set default values
+    const customScenario: AutomationScenario = {
+      id: `custom_${Date.now()}`,
+      enabled: true,
+      riskLevel: scenario.riskLevel || 'medium',
+      priority: scenario.priority || 5,
+      ...scenario
+    };
+
+    // Get existing context and add the new scenario
+    const context = enhancedAgent.getAutomationContext(userAddress);
+    if (!context) {
+      return res.status(404).json({ error: 'User not registered for automation' });
+    }
+
+    const updatedScenarios = [...context.scenarios, customScenario];
+    enhancedAgent.updateUserScenarios(userAddress, updatedScenarios);
+
+    res.json({
+      success: true,
+      message: 'Custom scenario created successfully',
+      scenario: {
+        id: customScenario.id,
+        name: customScenario.name,
+        type: customScenario.type,
+        enabled: customScenario.enabled
+      }
+    });
+  } catch (error) {
+    logger.error('Error creating custom scenario:', error);
+    res.status(500).json({ error: 'Failed to create custom scenario' });
   }
 });
 
@@ -389,6 +579,32 @@ app.get('/trades', (req, res) => {
   }
 });
 
+// Enhanced performance metrics
+app.get('/automation/performance/:userAddress', async (req, res) => {
+  try {
+    if (!enhancedAgent) {
+      return res.status(503).json({ error: 'Enhanced agent not initialized' });
+    }
+
+    const userAddress = req.params.userAddress as Address;
+    const context = enhancedAgent.getAutomationContext(userAddress);
+
+    if (!context) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      success: true,
+      userAddress,
+      performanceMetrics: context.performanceMetrics,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('Error getting automation performance:', error);
+    res.status(500).json({ error: 'Failed to get automation performance' });
+  }
+});
+
 // Agent controls
 app.post('/emergency-stop', (req, res) => {
   try {
@@ -415,6 +631,41 @@ app.post('/resume', (req, res) => {
   } catch (error) {
     logger.error('Error resuming automation:', error);
     res.status(500).json({ error: 'Failed to resume automation' });
+  }
+});
+
+// Enhanced agent controls
+app.post('/automation/start', async (req, res) => {
+  try {
+    if (!enhancedAgent) {
+      return res.status(503).json({ error: 'Enhanced agent not initialized' });
+    }
+
+    // Start the enhanced agent in the background
+    setImmediate(() => {
+      enhancedAgent.start().catch(error => {
+        logger.error('Error starting enhanced agent:', error);
+      });
+    });
+
+    res.json({ success: true, message: 'Enhanced automation started' });
+  } catch (error) {
+    logger.error('Error starting enhanced automation:', error);
+    res.status(500).json({ error: 'Failed to start enhanced automation' });
+  }
+});
+
+app.post('/automation/stop', (req, res) => {
+  try {
+    if (!enhancedAgent) {
+      return res.status(503).json({ error: 'Enhanced agent not initialized' });
+    }
+
+    enhancedAgent.stop();
+    res.json({ success: true, message: 'Enhanced automation stopped' });
+  } catch (error) {
+    logger.error('Error stopping enhanced automation:', error);
+    res.status(500).json({ error: 'Failed to stop enhanced automation' });
   }
 });
 
@@ -449,6 +700,16 @@ async function startServer(): Promise<void> {
       logger.info('  GET  /trades - Trade history');
       logger.info('  POST /emergency-stop - Emergency stop');
       logger.info('  POST /resume - Resume automation');
+      logger.info('');
+      logger.info('Enhanced Automation Endpoints:');
+      logger.info('  POST /automation/register - Register user automation');
+      logger.info('  GET  /automation/context/:userAddress - Get automation context');
+      logger.info('  PUT  /automation/scenarios/:userAddress - Update scenarios');
+      logger.info('  GET  /automation/status - Get engine status');
+      logger.info('  POST /automation/scenarios/custom - Create custom scenario');
+      logger.info('  GET  /automation/performance/:userAddress - Get user performance');
+      logger.info('  POST /automation/start - Start enhanced agent');
+      logger.info('  POST /automation/stop - Stop enhanced agent');
     });
   } catch (error) {
     logger.error('Failed to start server:', error);
@@ -459,11 +720,17 @@ async function startServer(): Promise<void> {
 // Graceful shutdown
 process.on('SIGINT', () => {
   logger.info('Received SIGINT, shutting down gracefully...');
+  if (enhancedAgent) {
+    enhancedAgent.stop();
+  }
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
   logger.info('Received SIGTERM, shutting down gracefully...');
+  if (enhancedAgent) {
+    enhancedAgent.stop();
+  }
   process.exit(0);
 });
 
@@ -475,4 +742,4 @@ if (require.main === module) {
   });
 }
 
-export { agentKit, automationAgent, startServer };
+export { agentKit, automationAgent, enhancedAgent, startServer };
