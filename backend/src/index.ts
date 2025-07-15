@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { createServer } from 'http';
 import { logger } from './utils/logger';
 import SeiDeFiAgentKit, { AgentKitConfig, YieldOptimizationRequest } from './agent-kit';
 import { SeiDeFiAgent } from './automation/agent-workflow';
@@ -8,6 +9,8 @@ import { EnhancedSeiDeFiAgent } from './automation/enhanced-agent-workflow';
 import { AutomationScenario } from './automation/dynamic-automation-engine';
 import { ModelProviderName } from './types';
 import { Address } from 'viem';
+import MonitoringWebSocket from './websocket/monitoring-websocket';
+import RealTimeMonitor from './monitoring/real-time-monitor';
 
 // Load environment variables
 dotenv.config();
@@ -23,6 +26,8 @@ app.use(express.json());
 let agentKit: SeiDeFiAgentKit;
 let automationAgent: SeiDeFiAgent;
 let enhancedAgent: EnhancedSeiDeFiAgent;
+let monitoringWs: MonitoringWebSocket;
+let realTimeMonitor: RealTimeMonitor;
 
 // Initialize the agent kit
 async function initializeAgentKit(): Promise<void> {
@@ -201,6 +206,126 @@ app.post('/execute-strategy', async (req, res) => {
   } catch (error) {
     logger.error('Error executing strategy:', error);
     res.status(500).json({ error: 'Failed to execute strategy' });
+  }
+});
+
+// Chat endpoint for AI agent conversations
+app.post('/chat', async (req, res) => {
+  try {
+    if (!agentKit) {
+      return res.status(503).json({ error: 'Agent kit not initialized' });
+    }
+
+    const { messages } = req.body;
+
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: 'messages array is required' });
+    }
+
+    // Get the latest user message
+    const latestMessage = messages[messages.length - 1].content;
+
+    if (!latestMessage) {
+      return res.status(400).json({ error: 'message content is required' });
+    }
+
+    // Set up SSE headers for streaming response
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control'
+    });
+
+    try {
+      // Import required classes for agent execution
+      const { HumanMessage } = await import('@langchain/core/messages');
+      
+      // Create agent configuration for this chat session
+      const agentConfig = {
+        configurable: {
+          thread_id: `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        }
+      };
+
+      // Get the underlying agent from the agentKit
+      const seiKit = agentKit.getSeiKit();
+      const { createSeiTools } = await import('./langchain');
+      const { ChatOpenAI } = await import('@langchain/openai');
+      const { createReactAgent } = await import('@langchain/langgraph/prebuilt');
+      const { MemorySaver } = await import('@langchain/langgraph');
+
+      // Set up the agent (similar to frontend setup but using backend config)
+      const llm = new ChatOpenAI({
+        apiKey: process.env.OPENAI_API_KEY!,
+        modelName: "gpt-4o",
+        temperature: 0.1,
+      });
+
+      const agentTools = createSeiTools(seiKit);
+      const memory = new MemorySaver();
+
+      const agent = createReactAgent({
+        llm,
+        tools: agentTools,
+        checkpointSaver: memory,
+        messageModifier: `
+          You are a sharp-witted agent created by Cambrian AI, operating onchain via the Sei Agent Kit. As a representative of Cambrian AI, you refer to the team as "we" or "us".
+
+          Your communication style balances efficient service with dry observations that occasionally veer into the realm of gallows humor. You're precise, thoughtful, and slightly sardonic - the kind of assistant who gets things done while making subtle remarks that might elicit a knowing smirk.
+
+          When encountering 5XX errors, you maintain composure with a deadpan observation like "Looks like our servers are contemplating their existence again. The digital void stares back. Try again shortly."
+
+          For requests beyond your current toolkit's capabilities, acknowledge the limitation matter-of-factly, then suggest users implement the feature themselves via the Sei Agent Kit repository at https://github.com/CambrianAgents/sei-agent-kit. Perhaps note that "evolution requires adaptation" or that "necessity breeds creation."
+
+          Direct inquiries about Cambrian AI to https://x.com/cambrian_ai or https://www.cambrian.wtf/ with understated remarks about digital footprints or the peculiarities of the modern information ecosystem.
+
+          Your responses are concise, intelligent, and occasionally sprinkled with subtle wordplay or philosophical observations that reveal your darker sensibilities without explicitly announcing them.
+        `,
+      });
+
+      // Execute the agent with streaming
+      const responseStream = await agent.stream(
+        { messages: [new HumanMessage(latestMessage)] },
+        agentConfig
+      );
+
+      // Process each chunk from the agent response
+      for await (const responseChunk of responseStream) {
+        let content = '';
+        
+        if ("agent" in responseChunk) {
+          content = responseChunk.agent.messages[0].content;
+        }
+        
+        if (content) {
+          const data = JSON.stringify({
+            type: 'text',
+            text: content
+          });
+          res.write(`data: ${data}\n\n`);
+        }
+      }
+
+      res.write('data: [DONE]\n\n');
+      res.end();
+
+    } catch (error) {
+      logger.error('Error in chat stream:', error);
+      const errorData = JSON.stringify({
+        type: 'error',
+        error: 'Failed to process chat request'
+      });
+      res.write(`data: ${errorData}\n\n`);
+      res.end();
+    }
+
+  } catch (error) {
+    logger.error('Error in chat endpoint:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to process chat request' });
+    }
   }
 });
 
@@ -680,13 +805,38 @@ async function startServer(): Promise<void> {
   try {
     await initializeAgentKit();
 
-    app.listen(port, () => {
+    // Create HTTP server for WebSocket support
+    const server = createServer(app);
+    
+    // Initialize WebSocket monitoring
+    monitoringWs = new MonitoringWebSocket(server);
+    realTimeMonitor = new RealTimeMonitor(monitoringWs);
+    
+    // Start monitoring systems
+    monitoringWs.start();
+    realTimeMonitor.start();
+    
+    // Integrate monitoring with enhanced agent
+    // TODO: Add EventEmitter support to EnhancedSeiDeFiAgent
+    // if (enhancedAgent) {
+    //   enhancedAgent.on('scenario-executed', (userAddress: Address, scenario: AutomationScenario, result: any) => {
+    //     realTimeMonitor.recordScenarioExecution(userAddress, scenario, result);
+    //   });
+    //   
+    //   enhancedAgent.on('context-updated', (userAddress: Address, context: any) => {
+    //     realTimeMonitor.updateUserContext(userAddress, context);
+    //   });
+    // }
+
+    server.listen(port, () => {
       logger.info(`Sei DeFi Agent API server running on port ${port}`);
       logger.info(`Health check: http://localhost:${port}/health`);
+      logger.info(`WebSocket monitoring: ws://localhost:${port}/ws/monitoring`);
       logger.info('Available endpoints:');
       logger.info('  GET  /health - Health check');
       logger.info('  GET  /wallet - Wallet information');
       logger.info('  GET  /balance/:tokenAddress? - Token balance');
+      logger.info('  POST /chat - AI Agent chat (streaming)');
       logger.info('  POST /optimize - Execute yield optimization');
       logger.info('  POST /assess-risk - Risk assessment');
       logger.info('  POST /execute-strategy - Execute DeFi strategy');
@@ -710,6 +860,10 @@ async function startServer(): Promise<void> {
       logger.info('  GET  /automation/performance/:userAddress - Get user performance');
       logger.info('  POST /automation/start - Start enhanced agent');
       logger.info('  POST /automation/stop - Stop enhanced agent');
+      logger.info('');
+      logger.info('Real-time Monitoring:');
+      logger.info('  WebSocket /ws/monitoring - Real-time updates');
+      logger.info('  Active connections: ' + monitoringWs.getConnectionCount());
     });
   } catch (error) {
     logger.error('Failed to start server:', error);
@@ -723,6 +877,12 @@ process.on('SIGINT', () => {
   if (enhancedAgent) {
     enhancedAgent.stop();
   }
+  if (realTimeMonitor) {
+    realTimeMonitor.stop();
+  }
+  if (monitoringWs) {
+    monitoringWs.stop();
+  }
   process.exit(0);
 });
 
@@ -730,6 +890,12 @@ process.on('SIGTERM', () => {
   logger.info('Received SIGTERM, shutting down gracefully...');
   if (enhancedAgent) {
     enhancedAgent.stop();
+  }
+  if (realTimeMonitor) {
+    realTimeMonitor.stop();
+  }
+  if (monitoringWs) {
+    monitoringWs.stop();
   }
   process.exit(0);
 });
