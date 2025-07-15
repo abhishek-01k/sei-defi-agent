@@ -21,8 +21,13 @@ import {
   Clock,
   BarChart3,
   Zap,
-  DollarSign
+  DollarSign,
+  Wifi,
+  WifiOff,
+  AlertCircle,
+  ExternalLink
 } from "lucide-react"
+import { useWebSocketMonitoring } from "@/hooks/use-websocket-monitoring"
 
 interface AutomationScenario {
   id: string
@@ -58,30 +63,38 @@ interface AutomationStatus {
 
 export default function AutomationPage() {
   const [automationContext, setAutomationContext] = useState<AutomationContext | null>(null)
-  const [automationStatus, setAutomationStatus] = useState<AutomationStatus | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [userAddress, setUserAddress] = useState<string>('')
   const [isRegistered, setIsRegistered] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('dashboard')
+  
+  // Real-time WebSocket monitoring
+  const monitoring = useWebSocketMonitoring({
+    userAddress: userAddress || undefined,
+    autoConnect: true
+  })
 
-  // Fetch automation status
-  const fetchAutomationStatus = async () => {
-    try {
-      const response = await fetch('/api/automation/status')
-      const data = await response.json()
-      if (data.success) {
-        setAutomationStatus(data.status)
+  // Get automation status from WebSocket or fallback to API
+  const getAutomationStatus = async () => {
+    if (!monitoring.automationStatus) {
+      try {
+        const response = await fetch('http://localhost:3000/automation/status')
+        const data = await response.json()
+        if (data.success) {
+          return data.status
+        }
+      } catch (error) {
+        console.error('Error fetching automation status:', error)
       }
-    } catch (error) {
-      console.error('Error fetching automation status:', error)
     }
+    return monitoring.automationStatus
   }
 
   // Fetch automation context for user
   const fetchAutomationContext = async (address: string) => {
     try {
-      const response = await fetch(`/api/automation/context/${address}`)
+      const response = await fetch(`http://localhost:3000/automation/context/${address}`)
       const data = await response.json()
       if (data.success) {
         setAutomationContext(data.context)
@@ -103,7 +116,7 @@ export default function AutomationPage() {
     setError(null)
 
     try {
-      const response = await fetch('/api/automation/register', {
+      const response = await fetch('http://localhost:3000/automation/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -148,7 +161,7 @@ export default function AutomationPage() {
     )
 
     try {
-      const response = await fetch(`/api/automation/scenarios/${userAddress}`, {
+      const response = await fetch(`http://localhost:3000/automation/scenarios/${userAddress}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -169,13 +182,14 @@ export default function AutomationPage() {
   const toggleAutomation = async (start: boolean) => {
     setIsLoading(true)
     try {
-      const response = await fetch(`/api/automation/${start ? 'start' : 'stop'}`, {
+      const response = await fetch(`http://localhost:3000/automation/${start ? 'start' : 'stop'}`, {
         method: 'POST'
       })
 
       const data = await response.json()
       if (data.success) {
-        await fetchAutomationStatus()
+        // Status will be updated via WebSocket
+        console.log(`Automation ${start ? 'started' : 'stopped'} successfully`)
       }
     } catch (error) {
       console.error('Error toggling automation:', error)
@@ -231,16 +245,17 @@ export default function AutomationPage() {
   }
 
   useEffect(() => {
-    fetchAutomationStatus()
-    const interval = setInterval(fetchAutomationStatus, 30000) // Update every 30 seconds
-    return () => clearInterval(interval)
-  }, [])
-
-  useEffect(() => {
     if (userAddress) {
       fetchAutomationContext(userAddress)
     }
   }, [userAddress])
+
+  // Handle WebSocket connection status
+  useEffect(() => {
+    if (monitoring.error) {
+      setError(monitoring.error)
+    }
+  }, [monitoring.error])
 
   return (
     <div className="min-h-screen bg-[#1c1c1c] text-[#fcf7f0] p-6">
