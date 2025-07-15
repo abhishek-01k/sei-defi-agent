@@ -13,6 +13,7 @@ A comprehensive end-to-end DeFi automation system for the Sei blockchain, featur
 
 ## 🏗️ Architecture
 
+### System Overview
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Yei Finance   │    │ Takara Lending  │    │ Sailor Finance  │
@@ -31,6 +32,26 @@ A comprehensive end-to-end DeFi automation system for the Sei blockchain, featur
                     │      Kit        │
                     └─────────────────┘
 ```
+
+### Frontend-Backend Architecture
+```
+┌─────────────────┐         HTTP API          ┌─────────────────┐
+│   Frontend UI   │ ────────────────────────→ │   Backend API   │
+│  (Next.js)      │                           │   (Express)     │
+│  Port: 3001     │ ←──────────────────────── │   Port: 3000    │
+└─────────────────┘    WebSocket/SSE           └─────────────────┘
+                                                        │
+                                               ┌─────────────────┐
+                                               │  Sei Agent Kit  │
+                                               │   & Automation  │
+                                               └─────────────────┘
+```
+
+**Key Points:**
+- Frontend runs on port 3001, Backend runs on port 3000
+- Frontend acts as a proxy and calls backend APIs exclusively
+- All sensitive operations (private keys, agent setup) happen on backend only
+- Real-time updates via WebSocket connections from backend to frontend
 
 ## 📋 Prerequisites
 
@@ -84,19 +105,54 @@ npm run build
 ## 🚀 Usage
 
 ### Development Mode
+
+1. **Start the Backend (Port 3000):**
 ```bash
+cd backend
 npm run dev
 ```
 
-### Production Mode
+2. **Start the Frontend (Port 3001):**
 ```bash
+cd frontend
+npm run dev
+```
+
+3. **Access the Application:**
+- Frontend UI: http://localhost:3001
+- Backend API: http://localhost:3000
+- API Health Check: http://localhost:3000/health
+
+### Production Mode
+
+1. **Build and start the Backend:**
+```bash
+cd backend
+npm run build
 npm start
 ```
 
-### Run Automation Only
+2. **Build and start the Frontend:**
 ```bash
+cd frontend
+npm run build
+npm start
+```
+
+### Run Automation Only (Backend)
+```bash
+cd backend
 npm run automation:start
 ```
+
+### Environment Variables
+
+**Backend (.env):**
+- Required: `PRIVATE_KEY`, `OPENAI_API_KEY`, `BRAHMA_API_KEY`
+- Optional: `RPC_URL`, `CHAIN_ID`, etc.
+
+**Frontend (.env.local):**
+- `NEXT_PUBLIC_BACKEND_URL=http://localhost:3000` (for production, use your backend URL)
 
 ## 📡 API Endpoints
 
