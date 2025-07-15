@@ -2,9 +2,9 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Cambrian Agent',
-  description: 'Cambrian Agent',
-  generator: 'cambrian.wtf',
+  title: 'Sei DeFi Agent',
+  description: 'Sei DeFi Agent',
+  generator: 'sei.wtf',
   icons: {
     icon: '/logo-lime.png',
     shortcut: '/logo-lime.png',

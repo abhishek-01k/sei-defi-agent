@@ -139,8 +139,9 @@ export const useWebSocketMonitoring = (options: UseWebSocketMonitoringOptions = 
     setIsConnecting(true);
     setError(null);
 
+    const BACKEND_WS_URL = process.env.NEXT_PUBLIC_BACKEND_WS_URL || 'http://localhost:3000';
     try {
-      const wsUrl = `ws://localhost:3000/ws/monitoring`;
+      const wsUrl = `${BACKEND_WS_URL}/ws/monitoring`;
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {

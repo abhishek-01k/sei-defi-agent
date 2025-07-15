@@ -67,7 +67,9 @@ export default function AutomationPage() {
   const [userAddress, setUserAddress] = useState<string>('')
   const [isRegistered, setIsRegistered] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState('dashboard')
+  const [activeTab, setActiveTab] = useState('dashboard');
+
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
   
   // Real-time WebSocket monitoring
   const monitoring = useWebSocketMonitoring({
@@ -79,7 +81,7 @@ export default function AutomationPage() {
   const getAutomationStatus = async () => {
     if (!monitoring.automationStatus) {
       try {
-        const response = await fetch('http://localhost:3000/automation/status')
+        const response = await fetch(`${BACKEND_URL}/automation/status`)
         const data = await response.json()
         if (data.success) {
           return data.status
@@ -94,7 +96,7 @@ export default function AutomationPage() {
   // Fetch automation context for user
   const fetchAutomationContext = async (address: string) => {
     try {
-      const response = await fetch(`http://localhost:3000/automation/context/${address}`)
+      const response = await fetch(`${BACKEND_URL}/automation/context/${address}`)
       const data = await response.json()
       if (data.success) {
         setAutomationContext(data.context)
@@ -116,7 +118,7 @@ export default function AutomationPage() {
     setError(null)
 
     try {
-      const response = await fetch('http://localhost:3000/automation/register', {
+      const response = await fetch(`${BACKEND_URL}/automation/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -161,7 +163,7 @@ export default function AutomationPage() {
     )
 
     try {
-      const response = await fetch(`http://localhost:3000/automation/scenarios/${userAddress}`, {
+      const response = await fetch(`${BACKEND_URL}/automation/scenarios/${userAddress}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -182,7 +184,7 @@ export default function AutomationPage() {
   const toggleAutomation = async (start: boolean) => {
     setIsLoading(true)
     try {
-      const response = await fetch(`http://localhost:3000/automation/${start ? 'start' : 'stop'}`, {
+      const response = await fetch(`${BACKEND_URL}/automation/${start ? 'start' : 'stop'}`, {
         method: 'POST'
       })
 
