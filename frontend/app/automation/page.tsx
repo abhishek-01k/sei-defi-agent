@@ -267,22 +267,34 @@ export default function AutomationPage() {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className={`w-3 h-3 rounded-full ${automationStatus?.isRunning ? 'bg-green-500' : 'bg-red-500'}`} />
+              <div className={`w-3 h-3 rounded-full ${
+                monitoring.isConnected 
+                  ? (monitoring.automationStatus?.isRunning ? 'bg-green-500' : 'bg-yellow-500')
+                  : 'bg-red-500'
+              }`} />
               <span className="text-sm">
-                {automationStatus?.isRunning ? 'Running' : 'Stopped'}
+                {monitoring.isConnected 
+                  ? (monitoring.automationStatus?.isRunning ? 'Running' : 'Stopped')
+                  : 'Disconnected'
+                }
               </span>
+              {monitoring.isConnected ? (
+                <Wifi className="h-4 w-4 text-green-500" />
+              ) : (
+                <WifiOff className="h-4 w-4 text-red-500" />
+              )}
             </div>
             <Button
-              onClick={() => toggleAutomation(!automationStatus?.isRunning)}
-              disabled={isLoading}
+              onClick={() => toggleAutomation(!monitoring.automationStatus?.isRunning)}
+              disabled={isLoading || !monitoring.isConnected}
               className={`${
-                automationStatus?.isRunning 
+                monitoring.automationStatus?.isRunning 
                   ? 'bg-red-600 hover:bg-red-700' 
                   : 'bg-green-600 hover:bg-green-700'
               } text-white`}
             >
-              {automationStatus?.isRunning ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
-              {automationStatus?.isRunning ? 'Stop' : 'Start'}
+              {monitoring.automationStatus?.isRunning ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+              {monitoring.automationStatus?.isRunning ? 'Stop' : 'Start'}
             </Button>
           </div>
         </div>
@@ -312,10 +324,16 @@ export default function AutomationPage() {
                 {isRegistered ? 'Refresh' : 'Register'}
               </Button>
             </div>
-            {error && (
+            {(error || monitoring.error) && (
               <Alert className="mt-4 bg-red-900/20 border-red-800">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertDescription className="text-red-200">{error}</AlertDescription>
+                <AlertDescription className="text-red-200">{error || monitoring.error}</AlertDescription>
+              </Alert>
+            )}
+            {monitoring.isConnecting && (
+              <Alert className="mt-4 bg-blue-900/20 border-blue-800">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-blue-200">Connecting to real-time monitoring...</AlertDescription>
               </Alert>
             )}
           </CardContent>
@@ -329,11 +347,29 @@ export default function AutomationPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${automationStatus?.isRunning ? 'bg-green-500' : 'bg-red-500'}`} />
+                <div className={`w-3 h-3 rounded-full ${
+                  monitoring.isConnected 
+                    ? (monitoring.automationStatus?.isRunning ? 'bg-green-500' : 'bg-yellow-500')
+                    : 'bg-red-500'
+                }`} />
                 <span className="text-2xl font-bold text-[#fcf7f0]">
-                  {automationStatus?.isRunning ? 'Active' : 'Inactive'}
+                  {monitoring.isConnected 
+                    ? (monitoring.automationStatus?.isRunning ? 'Active' : 'Inactive')
+                    : 'Offline'
+                  }
                 </span>
               </div>
+              {monitoring.automationStatus?.systemHealth && (
+                <div className="mt-2">
+                  <Badge className={`${
+                    monitoring.automationStatus.systemHealth === 'healthy' ? 'bg-green-100 text-green-800' :
+                    monitoring.automationStatus.systemHealth === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {monitoring.automationStatus.systemHealth}
+                  </Badge>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -343,7 +379,7 @@ export default function AutomationPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#fcf7f0]">
-                {automationStatus?.registeredUsers || 0}
+                {monitoring.automationStatus?.registeredUsers || 0}
               </div>
             </CardContent>
           </Card>
@@ -354,7 +390,7 @@ export default function AutomationPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#fcf7f0]">
-                {automationStatus?.totalScenarios || 0}
+                {monitoring.automationStatus?.totalScenarios || 0}
               </div>
             </CardContent>
           </Card>
@@ -384,7 +420,7 @@ export default function AutomationPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-[#fcf7f0]">
-                      {automationContext.performanceMetrics.totalExecutions}
+                      {monitoring.performanceMetrics?.totalExecutions || automationContext?.performanceMetrics.totalExecutions || 0}
                     </div>
                   </CardContent>
                 </Card>
@@ -395,10 +431,10 @@ export default function AutomationPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-[#fcf7f0]">
-                      {(automationContext.performanceMetrics.successRate * 100).toFixed(1)}%
+                      {((monitoring.performanceMetrics?.successRate || automationContext?.performanceMetrics.successRate || 0) * 100).toFixed(1)}%
                     </div>
                     <Progress 
-                      value={automationContext.performanceMetrics.successRate * 100} 
+                      value={(monitoring.performanceMetrics?.successRate || automationContext?.performanceMetrics.successRate || 0) * 100} 
                       className="mt-2"
                     />
                   </CardContent>
@@ -410,7 +446,7 @@ export default function AutomationPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-green-400">
-                      {formatNumber(automationContext.performanceMetrics.totalProfit)} SEI
+                      {formatNumber(monitoring.performanceMetrics?.totalProfit || automationContext?.performanceMetrics.totalProfit || '0')} SEI
                     </div>
                   </CardContent>
                 </Card>
@@ -421,7 +457,7 @@ export default function AutomationPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-red-400">
-                      {formatNumber(automationContext.performanceMetrics.totalGasCost)} SEI
+                      {formatNumber(monitoring.performanceMetrics?.totalGasCost || automationContext?.performanceMetrics.totalGasCost || '0')} SEI
                     </div>
                   </CardContent>
                 </Card>
@@ -457,18 +493,79 @@ export default function AutomationPage() {
                 </CardContent>
               </Card>
 
-              {/* Last Execution */}
-              {automationContext.performanceMetrics.lastExecution > 0 && (
+              {/* Real-time Trades */}
+              <Card className="bg-[#2a2a2a] border-[#333333]">
+                <CardHeader>
+                  <CardTitle className="text-[#fcf7f0]">Recent Trades</CardTitle>
+                  <CardDescription className="text-[#fcf7f0]/70">
+                    Real-time trade executions
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 max-h-48 overflow-y-auto">
+                    {monitoring.recentTrades.length > 0 ? (
+                      monitoring.recentTrades.slice(0, 5).map((trade) => (
+                        <div key={trade.id} className="flex items-center justify-between p-3 bg-[#333333] rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-2 h-2 rounded-full ${
+                              trade.status === 'success' ? 'bg-green-500' : 
+                              trade.status === 'failed' ? 'bg-red-500' : 'bg-yellow-500'
+                            }`} />
+                            <div>
+                              <div className="font-medium text-[#fcf7f0]">
+                                {trade.type.toUpperCase()} - {trade.protocol}
+                              </div>
+                              <div className="text-sm text-[#fcf7f0]/70">
+                                {trade.amount} {trade.token}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-medium text-[#fcf7f0]">
+                              {trade.profit ? `+${trade.profit} SEI` : '—'}
+                            </div>
+                            <div className="text-xs text-[#fcf7f0]/70">
+                              {new Date(trade.timestamp).toLocaleTimeString()}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center text-[#fcf7f0]/70 py-4">
+                        No recent trades
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Risk Alerts */}
+              {monitoring.riskAlerts.length > 0 && (
                 <Card className="bg-[#2a2a2a] border-[#333333]">
                   <CardHeader>
-                    <CardTitle className="text-[#fcf7f0]">Last Execution</CardTitle>
+                    <CardTitle className="text-[#fcf7f0] flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                      Risk Alerts
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-[#fcf7f0]/70" />
-                      <span className="text-[#fcf7f0]">
-                        {formatTime(automationContext.performanceMetrics.lastExecution)}
-                      </span>
+                    <div className="space-y-3">
+                      {monitoring.riskAlerts.slice(0, 3).map((alert, index) => (
+                        <Alert key={index} className={`${
+                          alert.severity === 'critical' ? 'bg-red-900/20 border-red-800' :
+                          alert.severity === 'high' ? 'bg-orange-900/20 border-orange-800' :
+                          alert.severity === 'medium' ? 'bg-yellow-900/20 border-yellow-800' :
+                          'bg-blue-900/20 border-blue-800'
+                        }`}>
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription className="text-[#fcf7f0]">
+                            <div className="font-medium">{alert.message}</div>
+                            <div className="text-sm text-[#fcf7f0]/70 mt-1">
+                              {alert.recommendations[0]}
+                            </div>
+                          </AlertDescription>
+                        </Alert>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
