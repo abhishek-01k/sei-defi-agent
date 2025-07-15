@@ -139,12 +139,14 @@ export const useWebSocketMonitoring = (options: UseWebSocketMonitoringOptions = 
     setIsConnecting(true);
     setError(null);
 
-    const BACKEND_WS_URL = process.env.NEXT_PUBLIC_BACKEND_WS_URL || 'http://localhost:3000';
+    const BACKEND_WS_URL = process.env.NEXT_PUBLIC_BACKEND_WS_URL || 'ws://localhost:3000';
     try {
       const wsUrl = `${BACKEND_WS_URL}/ws/monitoring`;
+      console.log('Connecting to WebSocket:', wsUrl);
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
+        console.log('WebSocket connection opened');
         setIsConnected(true);
         setIsConnecting(false);
         setError(null);
@@ -169,7 +171,9 @@ export const useWebSocketMonitoring = (options: UseWebSocketMonitoringOptions = 
 
       wsRef.current.onmessage = (event) => {
         try {
+          console.log('WebSocket message received:', event.data);
           const message = JSON.parse(event.data);
+          console.log('Parsed WebSocket message:', message);
           
           switch (message.type) {
             case 'connection_established':

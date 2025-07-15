@@ -60,16 +60,20 @@ export default function ChatInterface() {
       
       setMessages(prev => [...prev, assistantPlaceholder])
       
-      // Send request to our custom API route
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          messages: [...messages, userMessage]
-        })
+          // Send request to our custom API route
+    console.log('Sending request to frontend API route with messages:', [...messages, userMessage]);
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        messages: [...messages, userMessage]
       })
+    })
+    
+    console.log('Frontend API response status:', response.status);
+    console.log('Frontend API response headers:', response.headers);
       
       if (!response.ok) {
         throw new Error('Failed to fetch response')
@@ -89,27 +93,52 @@ export default function ChatInterface() {
         if (done) break
         
         const chunk = decoder.decode(value)
+        console.log('Received chunk from backend:', chunk)
         const lines = chunk.split('\n').filter(Boolean)
         
         for (const line of lines) {
-          try {
-            const parsedLine = JSON.parse(line)
+          console.log('Processing line:', line)
+          
+          // Skip empty lines
+          if (!line.trim()) continue;
+          
+          // Handle SSE format: lines should start with "data: "
+          if (line.startsWith('data: ')) {
+            const dataContent = line.substring(6); // Remove "data: " prefix
+            console.log('Extracted data content:', dataContent)
             
-            if (parsedLine.type === 'text') {
-              result = parsedLine.text
-              
-              // Update the assistant message with the new content
-              setMessages(prev => {
-                const updatedMessages = [...prev]
-                updatedMessages[updatedMessages.length - 1] = {
-                  ...updatedMessages[updatedMessages.length - 1],
-                  content: result
-                }
-                return updatedMessages
-              })
+            // Check for stream end marker
+            if (dataContent === '[DONE]') {
+              console.log('Stream completed')
+              break;
             }
-          } catch (e) {
-            console.error('Error parsing stream chunk:', e)
+            
+            try {
+              const parsedLine = JSON.parse(dataContent)
+              console.log('Parsed JSON:', parsedLine)
+              
+              if (parsedLine.type === 'text') {
+                result = parsedLine.text
+                console.log('Updated result:', result)
+                
+                // Update the assistant message with the new content
+                setMessages(prev => {
+                  const updatedMessages = [...prev]
+                  updatedMessages[updatedMessages.length - 1] = {
+                    ...updatedMessages[updatedMessages.length - 1],
+                    content: result
+                  }
+                  return updatedMessages
+                })
+              } else if (parsedLine.type === 'error') {
+                console.error('Backend error:', parsedLine.error)
+                throw new Error(parsedLine.error)
+              }
+            } catch (e) {
+              console.error('Error parsing JSON data:', dataContent, e)
+            }
+          } else {
+            console.log('Skipping non-SSE line:', line)
           }
         }
       }

@@ -14,6 +14,9 @@ export async function POST(req: Request) {
     }
 
     // Call the backend chat endpoint
+    console.log('Calling backend URL:', `${BACKEND_URL}/chat`);
+    console.log('Sending messages to backend:', messages);
+    
     const response = await fetch(`${BACKEND_URL}/chat`, {
       method: 'POST',
       headers: {
@@ -21,6 +24,9 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({ messages }),
     });
+    
+    console.log('Backend response status:', response.status);
+    console.log('Backend response headers:', response.headers);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));

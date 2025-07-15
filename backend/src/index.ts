@@ -32,9 +32,15 @@ let realTimeMonitor: RealTimeMonitor;
 // Initialize the agent kit
 async function initializeAgentKit(): Promise<void> {
   try {
+    console.log('Initializing agent kit...');
     // Validate required environment variables
     const requiredVars = ['PRIVATE_KEY', 'OPENAI_API_KEY', 'BRAHMA_API_KEY'];
     const missingVars = requiredVars.filter(varName => !process.env[varName]);
+
+    console.log('Environment variables check:');
+    requiredVars.forEach(varName => {
+      console.log(`${varName}: ${process.env[varName] ? '✓ Set' : '✗ Missing'}`);
+    });
 
     if (missingVars.length > 0) {
       throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
@@ -69,12 +75,23 @@ async function initializeAgentKit(): Promise<void> {
 
 // Basic API Routes
 app.get('/health', (req, res) => {
+  console.log('Health check endpoint called');
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
     walletAddress: agentKit?.getWalletAddress(),
     availableTools: agentKit?.getAvailableTools() || [],
     enhancedAgentStatus: enhancedAgent?.getEngineStatus() || {}
+  });
+});
+
+// Test endpoint for debugging
+app.get('/test', (req, res) => {
+  console.log('Test endpoint called');
+  res.json({
+    message: 'Backend is working!',
+    timestamp: new Date().toISOString(),
+    agentKitInitialized: !!agentKit
   });
 });
 
@@ -212,7 +229,9 @@ app.post('/execute-strategy', async (req, res) => {
 // Chat endpoint for AI agent conversations
 app.post('/chat', async (req, res) => {
   try {
+    console.log('Chat endpoint called');
     if (!agentKit) {
+      console.error('Agent kit not initialized');
       return res.status(503).json({ error: 'Agent kit not initialized' });
     }
 
@@ -224,6 +243,7 @@ app.post('/chat', async (req, res) => {
 
     // Get the latest user message
     const latestMessage = messages[messages.length - 1].content;
+    console.log('Processing chat message:', latestMessage);
 
     if (!latestMessage) {
       return res.status(400).json({ error: 'message content is required' });
@@ -295,6 +315,8 @@ app.post('/chat', async (req, res) => {
       for await (const responseChunk of responseStream) {
         let content = '';
         
+        console.log('Agent response chunk:', responseChunk);
+        
         if ("agent" in responseChunk) {
           content = responseChunk.agent.messages[0].content;
         }
@@ -304,10 +326,12 @@ app.post('/chat', async (req, res) => {
             type: 'text',
             text: content
           });
+          console.log('Sending SSE data:', `data: ${data}`);
           res.write(`data: ${data}\n\n`);
         }
       }
 
+      console.log('Sending stream completion marker');
       res.write('data: [DONE]\n\n');
       res.end();
 

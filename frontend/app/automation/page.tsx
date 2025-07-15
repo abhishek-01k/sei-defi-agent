@@ -623,7 +623,7 @@ export default function AutomationPage() {
                           <div className="space-y-1">
                             {Object.entries(scenario.parameters).slice(0, 3).map(([key, value]) => (
                               <div key={key} className="text-sm text-[#fcf7f0]">
-                                {key}: {typeof value === 'object' ? JSON.stringify(value) : value.toString()}
+                                {key}: {typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value || '')}
                               </div>
                             ))}
                           </div>
